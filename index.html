@@ -1,0 +1,540 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Collab Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: summary strip on top, filter toolbar, then entries grouped account-wise as cards; edit form opens as a side sheet (bottom sheet on phones). */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --surface2:#eaeeec; --line:#d9dfdc;
+  --fg:#16211e; --muted:#5d6b66; --accent:#0f766e; --accent-fg:#ffffff; --accent-soft:#d5ece8;
+  --good:#17703a; --good-bg:#dcf2e3; --warn:#8a5a00; --warn-bg:#fbebc8; --bad:#a32424; --bad-bg:#f8dcdc; --neutral-bg:#e6eae8;
+  --shadow:0 1px 2px rgba(20,35,30,.06),0 4px 16px rgba(20,35,30,.06);
+  --font-head:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1715; --surface:#17211f; --surface2:#1f2b28; --line:#2d3b37;
+  --fg:#e6efec; --muted:#9bada7; --accent:#3fc1b3; --accent-fg:#06201d; --accent-soft:#1a3c38;
+  --good:#6fd596; --good-bg:#17362483; --warn:#f0c15a; --warn-bg:#3d3112; --bad:#f28c8c; --bad-bg:#431c1c; --neutral-bg:#24312e;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1715; --surface:#17211f; --surface2:#1f2b28; --line:#2d3b37;
+  --fg:#e6efec; --muted:#9bada7; --accent:#3fc1b3; --accent-fg:#06201d; --accent-soft:#1a3c38;
+  --good:#6fd596; --good-bg:#17362483; --warn:#f0c15a; --warn-bg:#3d3112; --bad:#f28c8c; --bad-bg:#431c1c; --neutral-bg:#24312e;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.45;
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--font-head);margin:0;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.top h1{font-size:26px;letter-spacing:-.01em}
+.top p{margin:2px 0 0;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:500}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.stat span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.stat b{display:block;font-family:var(--font-head);font-size:24px;font-variant-numeric:tabular-nums;margin-top:2px}
+.stat.money b{color:var(--accent)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.toolbar .field{min-width:0}
+input[type=text],input[type=number],input[type=date],input[type=search],select{
+  width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:40px}
+.toolbar select,.toolbar input{width:auto;min-width:150px}
+.toolbar input[type=search]{flex:1 1 180px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13px}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:600}
+.chip em{font-style:normal;opacity:.75;font-variant-numeric:tabular-nums;margin-left:4px}
+
+.notice{padding:10px 14px;border-radius:8px;background:var(--warn-bg);color:var(--warn)}
+.group{display:flex;flex-direction:column;gap:10px}
+.group-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:6px}
+.group-h h2{font-size:18px}
+.group-h span{color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,310px),1fr));gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;text-align:left;display:flex;flex-direction:column;gap:8px;min-width:0;box-shadow:var(--shadow);width:100%}
+.card:hover{border-color:var(--accent)}
+.card.cancelled{opacity:.6}
+.card-h{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.card-h strong{font-weight:600;overflow-wrap:anywhere}
+.money{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.money small{display:block;color:var(--accent);font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:5px}
+.pill{font-size:12px;border-radius:6px;padding:2px 8px;background:var(--neutral-bg);color:var(--muted);white-space:nowrap}
+.pill.good{background:var(--good-bg);color:var(--good)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.meta{color:var(--muted);font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 12px}
+.empty{padding:32px 16px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:10px}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:8px;min-width:0;box-shadow:var(--shadow);min-height:104px}
+.tile:hover{border-color:var(--accent)}
+.tile h3{font-size:17px;overflow-wrap:anywhere}
+.tile .n{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.tile.add{border-style:dashed;box-shadow:none;align-items:center;justify-content:center;color:var(--accent);font-weight:600;background:transparent}
+.back{padding:6px 12px}
+.crumb{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.tile.arr{cursor:grab}
+.tile.dragging{opacity:.4}
+.tile.over{outline:2px dashed var(--accent);outline-offset:2px}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.tile .actions{margin-top:auto}
+/* edit sheet */
+.overlay{position:fixed;inset:0;background:rgba(5,12,10,.5);z-index:50;display:flex;justify-content:flex-end}
+.sheet{background:var(--surface);width:min(520px,100%);height:100%;overflow-y:auto;display:flex;flex-direction:column;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) 16px;gap:14px;border-left:1px solid var(--line)}
+.sheet-h{display:flex;justify-content:space-between;align-items:center}
+.sheet-h h2{font-size:20px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .full{grid-column:1/-1}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;min-width:0}
+.form label>*:not(span){text-transform:none;letter-spacing:0;color:var(--fg);font-size:14px}
+.sec{grid-column:1/-1;font-family:var(--font-head);font-size:14px;color:var(--accent);border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg label{flex-direction:row;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;color:var(--fg);text-transform:none;letter-spacing:0;font-size:14px}
+.seg label:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:600}
+.seg input{accent-color:var(--accent)}
+.calc{background:var(--accent-soft);border-radius:8px;padding:10px 12px;color:var(--fg);font-variant-numeric:tabular-nums}
+.check{flex-direction:row!important;align-items:center;gap:8px!important;text-transform:none!important;font-size:14px!important;color:var(--fg)!important;letter-spacing:0!important}
+.check input{width:auto;min-height:0;accent-color:var(--accent)}
+.sheet-f{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;position:sticky;bottom:0;background:var(--surface);padding-top:10px;border-top:1px solid var(--line)}
+@media (max-width:560px){
+  .overlay{align-items:flex-end}
+  .sheet{height:94%;border-radius:14px 14px 0 0;border-left:0}
+  .form{grid-template-columns:1fr}
+  .toolbar select,.toolbar input{width:100%}
+}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:in .18s ease-out}@keyframes in{from{transform:translateY(12px);opacity:.6}}}
+</style>
+
+<div class="wrap">
+  <div class="top" id="top"></div>
+  <div id="notice"></div>
+  <div class="stats" id="stats"></div>
+  <div id="filters" hidden>
+    <div class="toolbar">
+      <select id="fCollab" aria-label="Collaboration status">
+        <option value="">Sab status</option><option>In Progress</option><option>Completed</option><option>Cancelled</option>
+      </select>
+      <input type="search" id="fQ" placeholder="Product ya site khojein" aria-label="Khojein">
+    </div>
+    <div class="chips" id="chips" style="margin-top:10px"></div>
+  </div>
+
+  <div id="list"><div class="empty">Data load ho raha hai…</div></div>
+  <div id="who" style="text-align:center;color:var(--muted);font-size:12px"></div>
+</div>
+
+<div id="sheetHost"></div>
+<div id="loginHost"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDgaI7MC4Ek1QSb5VN6XcTq9A0B-oh_TcM",
+  authDomain: "opa-collab-tracker.firebaseapp.com",
+  projectId: "opa-collab-tracker",
+  storageBucket: "opa-collab-tracker.firebasestorage.app",
+  messagingSenderId: "915106043909",
+  appId: "1:915106043909:web:5745e4a5bfb6b14703246c"
+};
+window.REQUIRE_LOGIN = false;
+</script>
+<script>
+(function(){
+var SITES=['Amazon','Flipkart','Meesho','Myntra','Nykaa','Ajio','Tata Cliq','JioMart'];
+var state={accounts:[],loaded:false,db:null,view:'',arrange:false,dragId:'',f:{collab:'',q:'',quick:''},editing:null};
+var $=function(id){return document.getElementById(id)};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function uid(){return 'i'+Math.random().toString(36).slice(2,9)}
+function inr(n){return '₹'+Math.round(n).toLocaleString('en-IN')}
+function cashback(it){var p=+it.price||0,c=+it.cbPct||0;return p*c/100}
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(s){if(!s)return '';var p=s.split('-');if(p.length<3)return s;return (+p[2])+' '+MON[+p[1]-1]}
+function daysTo(s){if(!s)return null;var d=new Date(s+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
+function rel(s){var n=daysTo(s);if(n===null)return '';if(n===0)return 'aaj';if(n>0)return n+' din baad';return Math.abs(n)+' din pehle'}
+
+/* ---------- storage ---------- */
+/* Shared Firestore database (free Firebase Spark plan).
+   accounts/{id}  -> {name, order}
+   collabs/{id}   -> one document per collaboration: {accId, _seq, ...fields}
+   One document per collaboration means two people editing different entries never overwrite each other. */
+var lastItems={};   /* accId -> {itemId: stable json} as last seen on the server */
+var seqOf={};       /* itemId -> creation order */
+function sj(o){
+  if(Array.isArray(o))return '['+o.map(sj).join(',')+']';
+  if(o&&typeof o==='object')return '{'+Object.keys(o).sort().map(function(k){return JSON.stringify(k)+':'+sj(o[k])}).join(',')+'}';
+  return JSON.stringify(o===undefined?null:o);
+}
+function persist(acc,metaOnly){
+  if(!state.db)return Promise.resolve();
+  var db=state.db,batch=db.batch(),n=0;
+  batch.set(db.collection('accounts').doc(acc.id),{name:acc.name,order:acc.order||0});n++;
+  if(!metaOnly){
+    var last=lastItems[acc.id]||{},next={};
+    (acc.items||[]).forEach(function(it){
+      if(!seqOf[it.id])seqOf[it.id]=Date.now();
+      var data=JSON.parse(JSON.stringify(it));data._seq=seqOf[it.id];
+      var j=sj(data);next[it.id]=j;
+      if(last[it.id]!==j){batch.set(db.collection('collabs').doc(it.id),Object.assign({},data,{accId:acc.id}));n++}
+    });
+    Object.keys(last).forEach(function(id){if(!next[id]){batch.delete(db.collection('collabs').doc(id));n++}});
+    lastItems[acc.id]=next;
+  }
+  return batch.commit().catch(function(e){
+    $('notice').innerHTML='<div class="notice">Save nahi ho paya ('+esc(e&&e.code||'error')+'). Dobara try karein.</div>';
+  });
+}
+function findAcc(id){return state.accounts.filter(function(a){return a.id===id})[0]}
+
+/* ---------- derived ---------- */
+function scopeRows(){var out=[];state.accounts.forEach(function(a){if(state.view&&a.id!==state.view)return;(a.items||[]).forEach(function(it){out.push({a:a,it:it})})});return out}
+var QUICK={
+  pop:function(it){return it.collab!=='Cancelled'&&it.pop==='Not Uploaded'},
+  pod:function(it){return it.collab!=='Cancelled'&&it.pod==='Not Uploaded'},
+  review:function(it){return it.collab!=='Cancelled'&&it.reviewDone==='No'},
+  withdraw:function(it){return it.collab==='Completed'&&!it.paid}
+};
+function passes(row){
+  var it=row.it,f=state.f;
+  if(f.collab&&(it.collab||'In Progress')!==f.collab)return false;
+  if(f.quick&&!QUICK[f.quick](it))return false;
+  if(f.q){var s=(it.product+' '+(it.site||'')+' '+(it.boughtBy||'')).toLowerCase();if(s.indexOf(f.q.toLowerCase())<0)return false}
+  return true;
+}
+
+/* ---------- render ---------- */
+function pill(txt,cls){return '<span class="pill '+(cls||'')+'">'+esc(txt)+'</span>'}
+function cls(v){
+  if(['Uploaded','Yes','Accepted','Original','Completed'].indexOf(v)>=0)return 'good';
+  if(['Pending','In Progress','Copied'].indexOf(v)>=0)return 'warn';
+  if(['Not Uploaded','No','Rejected','Cancelled'].indexOf(v)>=0)return 'bad';
+  return '';
+}
+function renderTop(){
+  var acc=state.view?findAcc(state.view):null;
+  if(acc){
+    $('top').innerHTML='<div class="crumb"><button class="btn back" type="button" id="backBtn">← Sab account</button><h1>'+esc(acc.name)+'</h1></div>'+
+      '<div class="actions"><button class="btn" type="button" id="renameBtn">Naam badlein</button><button class="btn primary" type="button" id="addBtn">＋ Nayi collaboration</button></div>';
+    $('backBtn').onclick=function(){go('')};
+    $('renameBtn').onclick=function(){addAccount(acc.id)};
+    $('addBtn').onclick=function(){openSheet(acc.id,null)};
+  }else{
+    $('top').innerHTML='<div><h1>Collab Tracker</h1><p>'+(state.arrange?'Card ko kheench kar ya ◀ ▶ se apni jagah par rakhein':'Account chunein aur uski saari collaboration details dekhein')+'</p></div>'+
+      '<div class="actions"><button class="btn'+(state.arrange?' primary':'')+'" type="button" id="arrBtn">'+(state.arrange?'Ho gaya':'Accounts arrange karein')+'</button></div>';
+    $('arrBtn').onclick=function(){state.arrange=!state.arrange;render()};
+  }
+}
+function renderStats(){
+  $('stats').hidden=!state.view;if(!state.view)return;
+  var rows=scopeRows(),n=rows.length,c=0,x=0,p=0,wd=0;
+  rows.forEach(function(r){var s=r.it.collab||'In Progress';if(s==='Completed')c++;else if(s==='Cancelled')x++;else p++;if(QUICK.withdraw(r.it))wd+=cashback(r.it)});
+  $('stats').innerHTML=
+    '<div class="stat"><span>Total</span><b>'+n+'</b></div>'+
+    '<div class="stat"><span>In Progress</span><b>'+p+'</b></div>'+
+    '<div class="stat"><span>Completed</span><b>'+c+'</b></div>'+
+    '<div class="stat"><span>Cancelled</span><b>'+x+'</b></div>'+
+    '<div class="stat money"><span>Withdraw baaki</span><b>'+inr(wd)+'</b></div>';
+}
+function renderToolbar(){
+  $('filters').hidden=!state.view;
+  if(!state.view)return;
+  var rows=scopeRows();
+  var defs=[['','Sab',rows.length],['pop','POP baaki',rows.filter(function(r){return QUICK.pop(r.it)}).length],
+    ['pod','POD baaki',rows.filter(function(r){return QUICK.pod(r.it)}).length],
+    ['review','Review baaki',rows.filter(function(r){return QUICK.review(r.it)}).length],
+    ['withdraw','Withdraw baaki',rows.filter(function(r){return QUICK.withdraw(r.it)}).length]];
+  $('chips').innerHTML=defs.map(function(d){return '<button type="button" class="chip" data-q="'+d[0]+'" aria-pressed="'+(state.f.quick===d[0])+'">'+d[1]+'<em>'+d[2]+'</em></button>'}).join('');
+}
+function card(row){
+  var it=row.it,cb=cashback(it),st=it.collab||'In Progress';
+  var p=[];
+  p.push(pill('POP: '+(it.pop||'—'),cls(it.pop)));
+  p.push(pill('POD: '+(it.pod||'—'),cls(it.pod)));
+  p.push(pill('Review: '+(it.reviewDone||'—'),cls(it.reviewDone)));
+  if(it.reviewType)p.push(pill(it.reviewType+' review',it.reviewType==='Original'?'good':it.reviewType==='Copied'?'warn':'bad'));
+  var meta=[];
+  if(it.reviewDate)meta.push('Review date: '+fmtDate(it.reviewDate)+' ('+rel(it.reviewDate)+')');
+  if(it.purchase)meta.push((it.purchase==='Original'?'Original purchase':'Fake')+(it.site?' · '+esc(it.site):'')+(it.boughtBy?' · '+esc(it.boughtBy)+' ke account se':''));
+  if(st==='Completed')meta.push(it.paid?'Paisa mil gaya':'Withdraw: '+(it.withdrawDate?fmtDate(it.withdrawDate)+' ('+rel(it.withdrawDate)+')':'date set nahi'));
+  return '<button type="button" class="card'+(st==='Cancelled'?' cancelled':'')+'" data-a="'+esc(row.a.id)+'" data-i="'+esc(it.id)+'">'+
+    '<div class="card-h"><strong>'+esc(it.product||'(naam nahi)')+'</strong><div class="money">'+(it.price?inr(it.price):'—')+
+      (it.cbPct?'<small>'+it.cbPct+'% = '+inr(cb)+'</small>':'')+'</div></div>'+
+    '<div class="pills">'+pill(st,cls(st))+p.join('')+'</div>'+
+    (meta.length?'<div class="meta">'+meta.map(function(m){return '<span>'+m+'</span>'}).join('')+'</div>':'')+
+  '</button>';
+}
+function tile(a,idx,all){
+  if(state.arrange)return '<div class="tile arr" draggable="true" data-id="'+esc(a.id)+'"><h3>'+esc(a.name)+'</h3><div class="n">'+(a.items||[]).length+' collaboration</div><div class="actions"><button type="button" class="btn sm" data-mv="-1"'+(idx===0?' disabled':'')+'>◀ Pehle</button><button type="button" class="btn sm" data-mv="1"'+(idx===all.length-1?' disabled':'')+'>Baad me ▶</button></div></div>';
+  var it=a.items||[],c=0,x=0,p=0,todo=0;
+  it.forEach(function(i){var s=i.collab||'In Progress';if(s==='Completed')c++;else if(s==='Cancelled')x++;else p++;
+    if(QUICK.pop(i)||QUICK.pod(i)||QUICK.review(i)||QUICK.withdraw(i))todo++});
+  return '<button type="button" class="tile" data-acc="'+esc(a.id)+'"><h3>'+esc(a.name)+'</h3>'+
+    '<div class="n">'+it.length+' collaboration</div>'+
+    (it.length?'<div class="pills">'+(p?pill(p+' In Progress','warn'):'')+(c?pill(c+' Completed','good'):'')+(x?pill(x+' Cancelled','bad'):'')+(todo?pill(todo+' me kaam baaki',''):'')+'</div>':'<div class="n">Abhi koi entry nahi</div>')+
+  '</button>';
+}
+function renderList(){
+  if(!state.loaded){return}
+  if(!state.view){
+    $('list').innerHTML='<div class="tiles">'+state.accounts.map(tile).join('')+(state.arrange?'':'<button type="button" class="tile add" id="addAccBtn">＋ Account jodein</button>')+'</div>';
+    if(!state.arrange)$('addAccBtn').onclick=function(){addAccount()};
+        return;
+  }
+  var a=findAcc(state.view);
+  if(!a){$('list').innerHTML='<div class="empty">Ye account nahi mila.</div>';return}
+  var rows=(a.items||[]).map(function(it){return{a:a,it:it}}).filter(passes);
+  if(!(a.items||[]).length){$('list').innerHTML='<div class="empty">Is account me abhi koi collaboration nahi. Upar “＋ Nayi collaboration” dabayein.</div>';return}
+  $('list').innerHTML=rows.length?'<div class="grid">'+rows.map(card).join('')+'</div>':'<div class="empty">Is filter me koi collaboration nahi mili.</div>';
+}
+function render(){renderTop();renderStats();renderToolbar();renderList()}
+function moveAcc(id,to){
+  var arr=state.accounts,from=-1;arr.forEach(function(a,i){if(a.id===id)from=i});
+  if(from<0||to<0||to>=arr.length||to===from)return;
+  var a=arr.splice(from,1)[0];arr.splice(to,0,a);
+  arr.forEach(function(x,i){if(x.order!==i+1){x.order=i+1;persist(x,true)}});
+  render();
+}
+function go(id){
+  state.view=id;state.f={collab:'',q:'',quick:''};
+  $('fCollab').value='';$('fQ').value='';
+  try{if(id)location.hash='acc-'+id;else history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+  render();window.scrollTo(0,0);
+}
+
+/* ---------- edit sheet ---------- */
+function opt(list,val,blank){return (blank?'<option value="">'+blank+'</option>':'')+list.map(function(o){return '<option'+(o===val?' selected':'')+'>'+esc(o)+'</option>'}).join('')}
+function seg(name,list,val){return '<div class="seg full" role="radiogroup">'+list.map(function(o){return '<label><input type="radio" name="'+name+'" value="'+esc(o[0])+'"'+(o[0]===val?' checked':'')+'>'+esc(o[1])+'</label>'}).join('')+'</div>'}
+function openSheet(accId,itemId){
+  var acc=findAcc(accId||state.view)||state.accounts[0];
+  if(!acc){return}
+  var it=null;
+  if(itemId){it=(acc.items||[]).filter(function(x){return x.id===itemId})[0]}
+  var isNew=!it;
+  it=it||{id:uid(),product:'',price:'',cbPct:'',pop:'Not Uploaded',pod:'Not Uploaded',reviewDone:'No',reviewType:'',reviewDate:'',purchase:'Original',site:'',boughtBy:'',collab:'In Progress',withdrawDate:'',paid:false};
+  state.editing={accId:acc.id,id:it.id,isNew:isNew};
+  var U=['Not Uploaded','Uploaded','Not Required'];
+  var names=state.accounts.map(function(a){return a.name});
+  $('sheetHost').innerHTML=
+  '<div class="overlay" id="ov"><form class="sheet" id="sheet" autocomplete="off">'+
+   '<div class="sheet-h"><h2>'+(isNew?'Nayi collaboration':'Collaboration edit')+'</h2><button class="btn" type="button" id="closeSheet">Band karein</button></div>'+
+   '<div class="form">'+
+    '<label class="full"><span>Account</span><select id="f-acc">'+state.accounts.map(function(a){return '<option value="'+esc(a.id)+'"'+(a.id===acc.id?' selected':'')+'>'+esc(a.name)+'</option>'}).join('')+'</select></label>'+
+    '<label class="full"><span>Product ka naam</span><input type="text" id="f-product" value="'+esc(it.product)+'" required></label>'+
+    '<label><span>Product price (₹)</span><input type="number" id="f-price" min="0" step="any" inputmode="decimal" value="'+esc(it.price)+'"></label>'+
+    '<label><span>Cashback (%)</span><input type="number" id="f-cb" min="0" max="100" step="any" inputmode="decimal" value="'+esc(it.cbPct)+'"></label>'+
+    '<div class="calc full" id="calc"></div>'+
+    '<div class="sec">Proof</div>'+
+    '<label><span>Proof of Purchase (POP)</span><select id="f-pop">'+opt(U,it.pop)+'</select></label>'+
+    '<label><span>Proof of Delivery (POD)</span><select id="f-pod">'+opt(U,it.pod)+'</select></label>'+
+    '<div class="sec">Review</div>'+
+    '<label><span>Review kiya?</span><select id="f-rdone">'+opt(['No','Yes'],it.reviewDone)+'</select></label>'+
+    '<label><span>Review ki date</span><input type="date" id="f-rdate" value="'+esc(it.reviewDate)+'"></label>'+
+    '<label class="full"><span>Review type</span><select id="f-rtype">'+opt(['Original','Fake','Copied'],it.reviewType,'Chuna nahi')+'</select></label>'+
+    '<div class="sec">Purchase</div>'+
+    seg('purchase',[['Original','Original purchased'],['Fake','Fake']],it.purchase||'Original')+
+    '<label><span>E-commerce site</span><input type="text" id="f-site" list="siteList" value="'+esc(it.site)+'" placeholder="Amazon, Flipkart…"></label>'+
+    '<label><span>Kiske account se purchase</span><input type="text" id="f-by" list="byList" value="'+esc(it.boughtBy)+'"></label>'+
+    '<datalist id="siteList">'+SITES.map(function(s){return '<option value="'+s+'">'}).join('')+'</datalist>'+
+    '<datalist id="byList">'+names.map(function(s){return '<option value="'+esc(s)+'">'}).join('')+'</datalist>'+
+    '<div class="sec">Collaboration</div>'+
+    seg('collab',[['In Progress','In Progress'],['Completed','Completed'],['Cancelled','Cancelled']],it.collab||'In Progress')+
+    '<label id="wdBox"><span>Paisa withdraw hone ki date</span><input type="date" id="f-wd" value="'+esc(it.withdrawDate)+'"></label>'+
+    '<label class="check" id="paidBox"><input type="checkbox" id="f-paid"'+(it.paid?' checked':'')+'>Paisa withdraw ho gaya</label>'+
+   '</div>'+
+   '<div class="sheet-f"><div class="actions">'+(isNew?'':'<button class="btn danger" type="button" id="delBtn">Delete</button>')+'</div>'+
+   '<div class="actions"><button class="btn" type="button" id="cancelSheet">Cancel</button><button class="btn primary" type="submit">Save</button></div></div>'+
+  '</form></div>';
+  var sheet=$('sheet');
+  function sync(){
+    var p=+$('f-price').value||0,c=+$('f-cb').value||0;
+    $('calc').textContent=(p&&c)?'Cashback: '+c+'% of '+inr(p)+' = '+inr(p*c/100):'Price aur cashback % bharein, amount yahan dikhega.';
+    var done=sheet.querySelector('input[name=collab]:checked').value==='Completed';
+    $('wdBox').hidden=!done;$('paidBox').hidden=!done;
+  }
+  sheet.addEventListener('input',sync);sync();
+  $('closeSheet').onclick=$('cancelSheet').onclick=closeSheet;
+  $('ov').addEventListener('mousedown',function(e){if(e.target.id==='ov')closeSheet()});
+  if(!isNew)$('delBtn').onclick=function(){
+    this.outerHTML='<span style="align-self:center">Pakka delete?</span><button class="btn danger" type="button" id="delYes">Haan, delete</button>';
+    $('delYes').onclick=function(){
+      var a=findAcc(state.editing.accId);a.items=(a.items||[]).filter(function(x){return x.id!==state.editing.id});
+      persist(a);closeSheet();render();
+    };
+  };
+  sheet.addEventListener('submit',function(e){e.preventDefault();saveSheet()});
+  setTimeout(function(){var f=$('f-product');if(f&&isNew)f.focus()},50);
+}
+function closeSheet(){$('sheetHost').innerHTML='';state.editing=null}
+function saveSheet(){
+  var ed=state.editing,sheet=$('sheet');
+  var item={id:ed.id,product:$('f-product').value.trim(),price:$('f-price').value===''?'':+$('f-price').value,cbPct:$('f-cb').value===''?'':+$('f-cb').value,
+    pop:$('f-pop').value,pod:$('f-pod').value,reviewDone:$('f-rdone').value,reviewDate:$('f-rdate').value,reviewType:$('f-rtype').value,
+    purchase:sheet.querySelector('input[name=purchase]:checked').value,site:$('f-site').value.trim(),boughtBy:$('f-by').value.trim(),
+    collab:sheet.querySelector('input[name=collab]:checked').value,withdrawDate:$('f-wd').value,paid:$('f-paid').checked};
+  if(item.collab!=='Completed'){item.paid=false}
+  if(!item.product){$('f-product').focus();return}
+  var targetId=$('f-acc').value,src=findAcc(ed.accId),dst=findAcc(targetId);
+  if(!ed.isNew&&src.id!==dst.id){src.items=(src.items||[]).filter(function(x){return x.id!==ed.id});persist(src)}
+  var items=(dst.items||[]).slice(),idx=-1;
+  items.forEach(function(x,i){if(x.id===ed.id)idx=i});
+  if(idx>=0)items[idx]=item;else items.push(item);
+  dst.items=items;persist(dst);
+  closeSheet();render();
+}
+
+/* ---------- events ---------- */
+function addAccount(editId){
+  var ea=editId?findAcc(editId):null;
+  var host=$('sheetHost');
+  host.innerHTML='<div class="overlay" id="ov"><form class="sheet" id="accForm" style="height:auto;align-self:flex-start;width:min(420px,100%)"><div class="sheet-h"><h2>'+(ea?'Account ka naam badlein':'Naya account')+'</h2></div>'+
+    '<div class="form"><label class="full"><span>Account ka naam</span><input type="text" id="f-accname" required value="'+esc(ea?ea.name:'')+'"></label></div>'+
+    '<div class="sheet-f"><span></span><div class="actions"><button class="btn" type="button" id="accCancel">Cancel</button><button class="btn primary" type="submit">'+(ea?'Save':'Jodein')+'</button></div></div></form></div>';
+  $('accCancel').onclick=closeSheet;
+  $('ov').addEventListener('mousedown',function(e){if(e.target.id==='ov')closeSheet()});
+  $('accForm').onsubmit=function(e){
+    e.preventDefault();var n=$('f-accname').value.trim();if(!n)return;
+    if(ea){ea=findAcc(ea.id)||ea;ea.name=n;persist(ea,true);closeSheet();render();return}
+    var order=state.accounts.reduce(function(m,a){return Math.max(m,a.order||0)},0)+1;
+    var acc={id:'a'+Date.now().toString(36),name:n,order:order,items:[]};
+    state.accounts.push(acc);persist(acc,true);closeSheet();render();
+  };
+  setTimeout(function(){$('f-accname').focus()},50);
+}
+$('fCollab').onchange=function(){state.f.collab=this.value;renderList()};
+$('fQ').oninput=function(){state.f.q=this.value;renderList()};
+$('chips').onclick=function(e){var b=e.target.closest('.chip');if(!b)return;state.f.quick=b.dataset.q;render()};
+$('list').addEventListener('click',function(e){
+  var m=e.target.closest('[data-mv]');if(!m)return;
+  var t=m.closest('.tile.arr');var idx=-1;state.accounts.forEach(function(a,i){if(a.id===t.dataset.id)idx=i});
+  moveAcc(t.dataset.id,idx+(+m.dataset.mv));
+});
+$('list').addEventListener('dragstart',function(e){var t=e.target.closest&&e.target.closest('.tile.arr');if(!t)return;state.dragId=t.dataset.id;t.classList.add('dragging');try{e.dataTransfer.setData('text/plain',t.dataset.id);e.dataTransfer.effectAllowed='move'}catch(x){}});
+$('list').addEventListener('dragover',function(e){var t=e.target.closest&&e.target.closest('.tile.arr');if(!t||!state.dragId)return;e.preventDefault();Array.prototype.forEach.call(document.querySelectorAll('.tile.over'),function(n){n.classList.remove('over')});t.classList.add('over')});
+$('list').addEventListener('drop',function(e){var t=e.target.closest&&e.target.closest('.tile.arr');if(!t||!state.dragId)return;e.preventDefault();
+  var to=-1;state.accounts.forEach(function(a,i){if(a.id===t.dataset.id)to=i});var id=state.dragId;state.dragId='';moveAcc(id,to)});
+$('list').addEventListener('dragend',function(){state.dragId='';Array.prototype.forEach.call(document.querySelectorAll('.tile.dragging,.tile.over'),function(n){n.classList.remove('dragging','over')})});
+$('list').onclick=function(e){var t=e.target.closest('.tile[data-acc]');if(t){go(t.dataset.acc);return}var c=e.target.closest('.card');if(c)openSheet(c.dataset.a,c.dataset.i)};
+window.addEventListener('hashchange',function(){var h=location.hash.replace('#','');var id=h.indexOf('acc-')===0?h.slice(4):'';if(id!==state.view){state.view=id;state.f={collab:'',q:'',quick:''};$('fCollab').value='';$('fQ').value='';render()}});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&state.editing)closeSheet()});
+
+/* ---------- boot ---------- */
+var timer=setTimeout(function(){if(!state.loaded)$('list').innerHTML='<div class="empty">Data abhi nahi pahunch raha. Internet check karke page dobara kholein.</div>'},10000);
+function start(){
+  var cfg=window.FIREBASE_CONFIG;
+  if(!window.firebase||!cfg||!cfg.apiKey||String(cfg.apiKey).indexOf('PASTE')>=0){noDb();return}
+  var db,auth;
+  try{firebase.initializeApp(cfg);db=firebase.firestore();auth=window.REQUIRE_LOGIN?firebase.auth():null}catch(e){noDb();return}
+  state.db=db;
+  var accDocs=null,itemDocs=null,unsubs=[];
+  function showLogin(msg){
+    clearTimeout(timer);
+    $('who').innerHTML='';
+    $('list').innerHTML='';$('stats').hidden=true;$('filters').hidden=true;
+    $('loginHost').innerHTML='<div class="overlay" style="justify-content:center;align-items:center"><form class="sheet" id="loginForm" style="height:auto;width:min(380px,calc(100% - 32px));border-radius:14px;border:1px solid var(--line)">'+
+      '<div class="sheet-h"><h2>Sign in karein</h2></div>'+
+      '<div class="form"><label class="full"><span>Email</span><input type="text" id="l-email" autocomplete="username" required></label>'+
+      '<label class="full"><span>Password</span><input type="password" id="l-pass" autocomplete="current-password" required style="width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:40px"></label></div>'+
+      '<div id="l-err" class="notice" '+(msg?'':'hidden')+'>'+esc(msg||'')+'</div>'+
+      '<div class="sheet-f"><span></span><div class="actions"><button class="btn primary" type="submit">Sign in</button></div></div></form></div>';
+    $('loginForm').onsubmit=function(e){
+      e.preventDefault();
+      auth.signInWithEmailAndPassword($('l-email').value.trim(),$('l-pass').value).catch(function(){
+        $('l-err').hidden=false;$('l-err').textContent='Email ya password galat hai.';
+      });
+    };
+    setTimeout(function(){var f=$('l-email');if(f)f.focus()},50);
+  }
+  function rebuild(){
+    if(!accDocs||!itemDocs)return;
+    clearTimeout(timer);
+    var by={};lastItems={};
+    itemDocs.forEach(function(d){
+      var v=d.data()||{},aid=v.accId;if(!aid)return;
+      var seq=v._seq||0;seqOf[d.id]=seq;
+      var it=Object.assign({},v);delete it.accId;it.id=d.id;
+      (by[aid]=by[aid]||[]).push(it);
+      (lastItems[aid]=lastItems[aid]||{})[d.id]=sj(it);
+    });
+    Object.keys(by).forEach(function(k){by[k].sort(function(a,b){return (a._seq||0)-(b._seq||0)})});
+    state.accounts=accDocs.map(function(d){var v=d.data()||{};return{id:d.id,name:v.name||d.id,order:v.order||0,items:by[d.id]||[]}});
+    state.loaded=true;
+    if(!state.editing)render();else{renderStats();renderToolbar()}
+  }
+  function fail(err){clearTimeout(timer);$('list').innerHTML='<div class="empty">Data nahi khul paya ('+esc(err&&err.code||'error')+').</div>'}
+  function attach(user){
+    unsubs.forEach(function(u){u()});unsubs=[];accDocs=null;itemDocs=null;
+    $('loginHost').innerHTML='';
+    if(auth){$('who').innerHTML=esc(user.email||'')+' · <a href="#" id="signOut">Sign out</a>';
+      $('signOut').onclick=function(e){e.preventDefault();auth.signOut()}}
+    timer=setTimeout(function(){if(!state.loaded)$('list').innerHTML='<div class="empty">Data abhi nahi pahunch raha. Internet check karke page dobara kholein.</div>'},10000);
+    unsubs.push(db.collection('accounts').orderBy('order').onSnapshot(function(s){accDocs=s.docs;rebuild()},fail));
+    unsubs.push(db.collection('collabs').onSnapshot(function(s){itemDocs=s.docs;rebuild()},fail));
+    if(location.hash==='#import')showImport();
+  }
+  /* keep a local offline cache so the app opens instantly and survives short network drops */
+  var p;try{p=db.enablePersistence({synchronizeTabs:true})}catch(e){p=Promise.resolve()}
+  p.catch(function(){}).then(function(){
+    if(!auth){attach({email:''});return}
+    auth.onAuthStateChanged(function(user){
+      if(user){attach(user)}
+      else{unsubs.forEach(function(u){u()});unsubs=[];accDocs=null;itemDocs=null;state.accounts=[];state.loaded=false;state.view='';showLogin()}
+    });
+  });
+}
+/* One-time import of old data. Only appears when the link ends with #import */
+function showImport(){
+  $('notice').innerHTML='<div class="notice">Purana data import: <input type="file" id="impFile" accept=".json"> <button class="btn sm" type="button" id="impGo">Import karein</button> <span id="impMsg"></span></div>';
+  $('impGo').onclick=function(){
+    var f=$('impFile').files[0],msg=$('impMsg');
+    if(!f){msg.textContent=' Pehle file chuniye.';return}
+    if(state.accounts.length&&!confirm('Database me pehle se data hai. Phir bhi import karein?'))return;
+    var r=new FileReader();
+    r.onload=function(){
+      var data;try{data=JSON.parse(r.result);if(!Array.isArray(data))throw 0}catch(e){msg.textContent=' File sahi nahi hai.';return}
+      msg.textContent=' Import ho raha hai…';
+      var db=state.db,ops=[];
+      data.forEach(function(a){
+        ops.push(function(b){b.set(db.collection('accounts').doc(a.id),{name:a.name,order:a.order||0})});
+        (a.items||[]).forEach(function(it,i){
+          ops.push(function(b){b.set(db.collection('collabs').doc(it.id),Object.assign({},it,{accId:a.id,_seq:i+1}))});
+        });
+      });
+      var p=Promise.resolve();
+      for(var s=0;s<ops.length;s+=400){(function(chunk){
+        p=p.then(function(){var b=db.batch();chunk.forEach(function(fn){fn(b)});return b.commit()});
+      })(ops.slice(s,s+400))}
+      p.then(function(){msg.textContent=' Ho gaya! '+data.length+' accounts import hue.';try{history.replaceState(null,'',location.pathname)}catch(e){}})
+       .catch(function(e){msg.textContent=' Import fail ('+(e&&e.code||'error')+').'});
+    };
+    r.readAsText(f);
+  };
+}
+function noDb(){
+  clearTimeout(timer);state.loaded=true;
+  $('notice').innerHTML='<div class="notice">Database jodna baaki hai. firebase-config.js me apni Firebase details daalein, tab data save aur share hoga.</div>';
+  render();
+}
+(function(){var h=location.hash.replace('#','');if(h.indexOf('acc-')===0)state.view=h.slice(4)})();
+render();
+start();
+})();
+</script>
+
+</body></html>
